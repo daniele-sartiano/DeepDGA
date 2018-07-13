@@ -38,6 +38,9 @@ class Reader(object):
 
     def get_label(self, label):
         return int(label)
+    
+    def convert_labels(self, labels):
+        return labels
 
     @staticmethod
     def revert(array):
@@ -52,6 +55,11 @@ class MultiClassReader(Reader):
     def get_label(self, label):
         print(np_utils.to_categorical(label, self.nb_classes))
         return np_utils.to_categorical(label, self.nb_classes)
+
+    def convert_labels(self, labels):
+        if self.nb_classes > 1:
+            return np.argmax(labels, axis=-1)
+        return labels
     
 class Classifier(object):
     LEN_CHARS = 255
@@ -206,10 +214,9 @@ def main():
         classifier.save_model()
             
         classifier.evaluate(X_dev, y_dev)
-
         y_pred = classifier.predict(X_dev)
         classifier.model.summary()
-        print(classifier.classification_report(y_dev, y_pred))
+        print(classifier.classification_report(r.convert_labels(y_dev), y_pred))
 
     elif args.which == 'predict':
         X, _ = r.read()

@@ -53,7 +53,6 @@ class MultiClassReader(Reader):
         self.nb_classes = nb_classes
     
     def get_label(self, label):
-        print(np_utils.to_categorical(label, self.nb_classes))
         return np_utils.to_categorical(label, self.nb_classes)
 
     def convert_labels(self, labels):
@@ -108,7 +107,7 @@ class Classifier(object):
                        epochs=self.epochs,
                        callbacks=[
                            EarlyStopping(verbose=True, patience=5, monitor='val_loss'),
-                           ModelCheckpoint(self.file_model + '.tmp', monitor='val_loss', verbose=True, save_best_only=True)
+                           ModelCheckpoint(filepath=self.file_model + '.hdf5', monitor='val_loss', verbose=True, save_best_only=True)
                        ]
         )
 
@@ -175,6 +174,7 @@ def main():
     parser_train.add_argument('-dropout', '--dropout', help='Dropout', type=float, default=0.2)
     parser_train.add_argument('-bi', '--bidirectional', help='Bidirectional LSTML', action='store_true')
     parser_train.add_argument('-nodense', '--nodense', help='Without dense layer after lstml', action='store_true')
+    parser_train.add_argument('-split', '--split', help='Split train/dev', action='store_true')
     
     for arg in common_args:
         parser_train.add_argument(*arg[0], **arg[1])
@@ -193,8 +193,11 @@ def main():
     
     if args.which == 'train':        
         X, y = r.read()
-        X_train, X_dev, y_train, y_dev = train_test_split(X, y, random_state=42)
-
+        if args.split:
+            X_train, X_dev, y_train, y_dev = train_test_split(X, y, random_state=42)
+        else:
+            X_train = X
+            y_train = y
         name_file = '{}.model'.format(int(time.time()))
 
         params = {
@@ -212,12 +215,13 @@ def main():
         
         classifier.train(X_train, y_train)
         classifier.save_model()
-            
-        classifier.evaluate(X_dev, y_dev)
-        y_pred = classifier.predict(X_dev)
-        classifier.model.summary()
-        print(classifier.classification_report(r.convert_labels(y_dev), y_pred))
 
+        if args.split:
+            classifier.evaluate(X_dev, y_dev)
+            y_pred = classifier.predict(X_dev)
+            print(classifier.classification_report(r.convert_labels(y_dev), y_pred))
+        classifier.model.summary()
+        
     elif args.which == 'predict':
         X, _ = r.read()
         classifier = Classifier(file_model=args.file_model)

@@ -29,6 +29,13 @@ class Reader(object):
             y.append(self.get_label(label))
         return np.asarray(X), np.asarray(y)
 
+    def predict_read(self):
+        X = []
+        for example in self.input:
+            domain = example.strip()
+            X.append(self.convert(domain))
+        return np.asarray(X)
+
     @staticmethod
     def convert(domain):
         d = np.zeros(255)
@@ -40,7 +47,7 @@ class Reader(object):
         return int(label)
     
     def convert_labels(self, labels):
-        return labels
+        return labels[0]
 
     @staticmethod
     def revert(array):
@@ -63,7 +70,7 @@ class MultiClassReader(Reader):
 class Classifier(object):
     LEN_CHARS = 255
 
-    def __init__(self, file_model='', nb_classes=1, embeddings_dim=50, batch_size=1024, epochs=20, lstm_size=1024, bidirectional=False, dropout=0.2, nodense=False):
+    def __init__(self, file_model='', nb_classes=1, embeddings_dim=50, batch_size=1024, epochs=20, lstm_size=1024, bidirectional=False, dropout=0.2, nodense=False, summary=True):
         self.file_model = file_model
         self.nb_classes = nb_classes
         self.embeddings_dim = embeddings_dim
@@ -72,10 +79,10 @@ class Classifier(object):
         self.lstm_size = lstm_size
         self.dropout = dropout
         self.bidirectional = bidirectional
-        self.nodense= nodense
-        self._model()
+        self.nodense = nodense
+        self._model(summary)
 
-    def _model(self):
+    def _model(self, summary):
         domain_input = Input(shape=(Reader.DIM,))
         embeddings = Embedding(
             input_dim=self.LEN_CHARS,
@@ -92,7 +99,8 @@ class Classifier(object):
         out = Dense(1, activation='sigmoid')(lstm)
         self.model = Model(inputs=[domain_input], outputs=out)
         self.model.compile(loss='binary_crossentropy', optimizer=Adam(lr=0.0001), metrics=['accuracy'])
-        self.model.summary()
+        if summary:
+            self.model.summary()
 
     def save_model(self):
         self.model.save(self.file_model)
@@ -160,14 +168,14 @@ def main():
 
     common_args = [
         (['-f', '--file-model'], {'help':'file model', 'type':str, 'default':'web.model'}),
-        (['-i', '--input'], {'help':'input', 'help': 'input, default standard input', 'type':str, 'default':None})
+        (['-i', '--input'], {'help':'input', 'help': 'input, default standard input', 'type':str, 'default':None}),
+        (['-nb', '--nb-classes'], {'help': 'nb classes', 'type':int, 'default':1})
     ]
 
     parser_train = subparsers.add_parser('train')
     parser_train.set_defaults(which='train')
 
     parser_train.add_argument('-e', '--epochs', help='Epochs', type=int, default=20)
-    parser_train.add_argument('-nb', '--nb-classes', help='nb classes', type=int, default=1)
     parser_train.add_argument('-ed', '--embedding-dim', help='Embedding dim', type=int, default=50)
     parser_train.add_argument('-b', '--batch-size', help='Batch size', type=int, default=1024)
     parser_train.add_argument('-lstm', '--lstm-size', help='LSTM layer size', type=int, default=1024)
@@ -223,12 +231,12 @@ def main():
         classifier.model.summary()
         
     elif args.which == 'predict':
-        X, _ = r.read()
-        classifier = Classifier(file_model=args.file_model)
+        X = r.predict_read()
+        classifier = Classifier(file_model=args.file_model, summary=False)
         classifier.load_model()
-        y_pred = classifier.predict(X)
+        y_pred = classifier.predict(X, verbose=0)
         for i, el in enumerate(X):
-            print(Reader.revert(el), y_pred[i])
+            print('{},{}'.format(Reader.revert(el), r.convert_labels(y_pred[i])))
 
 if __name__ == '__main__':
     main()

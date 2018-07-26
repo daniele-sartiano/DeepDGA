@@ -193,6 +193,12 @@ def main():
     for arg in common_args:
         parser_predict.add_argument(*arg[0], **arg[1])
 
+    parser_visualize = subparsers.add_parser('visualize')
+    parser_visualize.set_defaults(which='visualize')
+
+    for arg in common_args:
+        parser_visualize.add_argument(*arg[0], **arg[1])
+
     args = parser.parse_args()
 
     input = open(args.input) if args.input else sys.stdin
@@ -237,6 +243,11 @@ def main():
         y_pred = classifier.predict(X, verbose=0)
         for i, el in enumerate(X):
             print('{},{}'.format(Reader.revert(el), r.convert_labels(y_pred[i])))
+    elif args.which == 'visualize':
+        classifier = Classifier(file_model=args.file_model, summary=False)
+        classifier.load_model()
+        from keras.utils import plot_model
+        plot_model(classifier.model, to_file='model.png')
 
 if __name__ == '__main__':
     main()

@@ -176,7 +176,7 @@ def main():
     parser_train.set_defaults(which='train')
 
     parser_train.add_argument('-e', '--epochs', help='Epochs', type=int, default=20)
-    parser_train.add_argument('-ed', '--embedding-dim', help='Embedding dim', type=int, default=50)
+    parser_train.add_argument('-ed', '--embeddings-dim', help='Embeddings dim', type=int, default=50)
     parser_train.add_argument('-b', '--batch-size', help='Batch size', type=int, default=1024)
     parser_train.add_argument('-lstm', '--lstm-size', help='LSTM layer size', type=int, default=1024)
     parser_train.add_argument('-dropout', '--dropout', help='Dropout', type=float, default=0.2)
@@ -222,7 +222,8 @@ def main():
             'lstm_size': args.lstm_size,
             'bidirectional': args.bidirectional,
             'dropout':args.dropout,
-            'nodense':args.nodense
+            'nodense':args.nodense,
+            'embeddings_dim':args.embeddings_dim
         }
         
         classifier = Classifier(**params) if args.nb_classes == 1 else BotNetClassifier(**params)
